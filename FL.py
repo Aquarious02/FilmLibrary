@@ -1,6 +1,7 @@
-import os, pickle
+import os
+import pickle
 from dataclasses import dataclass
-
+from enum import IntEnum, auto
 
 @dataclass
 class Season:
@@ -53,49 +54,80 @@ class Serial:
         return f'{self.name}: s{self.current_season}e{self.current_episode}'
 
 
-def get_serials(directory) -> dict:
-    """
-    :param directory: directory with serials
-    :return: {serial_name: Serial, ...}
-    """
-    serials = {}
-    for dir_name in os.listdir(directory):
-        full_serial_path = fr'{directory}\{dir_name}'
-        if os.path.isdir(full_serial_path):
-            last_season = os.listdir(full_serial_path)[-1]
-            last_season_number = extract_digits(last_season)
+class LibraryManager:
+    data_dir = 'data'
 
-            max_episode_number = len(os.listdir(fr'{full_serial_path}\{last_season}'))
+    class State(IntEnum):
+        deciding = auto()
+        watching = auto()
+        editing = auto()
 
-            seasons = []
-            for season_number, season_name in enumerate(os.listdir(full_serial_path), start=1):
-                full_season_path = fr'{full_serial_path}\{season_name}'
-                seasons.append(Season(number=season_number, full_path=full_season_path, episodes=list(os.listdir(full_season_path))))
+    def __init__(self, dir_with_serials):
+        self.dir_with_serials = dir_with_serials
+        self.current_serials = None
+        self.serials_to_show = None
+        self.current_state = self.State.deciding
 
-            serials[dir_name] = Serial(name=dir_name, full_path=full_serial_path, max_season=last_season_number,
-                                       max_episode=max_episode_number, seasons=seasons)
+    @staticmethod
+    def get_serials_from_dir(directory) -> dict:
+        """
+        :param directory: directory with serials
+        :return: {serial_name: Serial, ...}
+        """
+        serials = {}
+        for dir_name in os.listdir(directory):
+            full_serial_path = fr'{directory}\{dir_name}'
+            if os.path.isdir(full_serial_path):
+                last_season = os.listdir(full_serial_path)[-1]
+                last_season_number = extract_digits(last_season)
 
-    return serials
+                max_episode_number = len(os.listdir(fr'{full_serial_path}\{last_season}'))
 
+                seasons = []
+                for season_number, season_name in enumerate(os.listdir(full_serial_path), start=1):
+                    full_season_path = fr'{full_serial_path}\{season_name}'
+                    seasons.append(Season(number=season_number, full_path=full_season_path,
+                                          episodes=list(os.listdir(full_season_path))))
 
-def txt_version(dir_with_serials):
-    try:
-        with open('data/watched', 'rb') as f:
-            current_serials = pickle.load(f)
-    except FileNotFoundError:
-        current_serials = get_serials(dir_with_serials)
-        if not os.path.exists('data'):
-            os.mkdir('data')
-        with open('data/watched', 'wb') as f:
-            pickle.dump(current_serials, f)
+                serials[dir_name] = Serial(name=dir_name, full_path=full_serial_path, max_season=last_season_number,
+                                           max_episode=max_episode_number, seasons=seasons)
+        return serials
 
-    if current_serials:
-        serials_to_show = []
-        print('В вашей фильмотеке содержатся следующие сериалы:')
-        for serial_name, serial in current_serials.items():
-            if not serial.watched:
-                serials_to_show.append(serial)
-                print(f'{len(serials_to_show)}. {serial_name}. (Остановились на s{serial.current_season}.e{serial.current_season})')
+    def update_serials(self):
+        try:
+            with open(f'{self.data_dir}/watched', 'rb') as f:
+                self.current_serials = pickle.load(f)
+        except FileNotFoundError:
+            self.current_serials = self.get_serials_from_dir(self.dir_with_serials)
+            if not os.path.exists(self.data_dir):
+                os.mkdir(self.data_dir)
+
+            with open(f'{self.data_dir}/watched', 'wb') as f:
+                pickle.dump(self.current_serials, f)
+
+    def show_serials_list(self):
+        if self.current_serials:
+            self.serials_to_show = []
+            print('В вашей фильмотеке содержатся следующие сериалы:')
+            for serial_name, serial in self.current_serials.items():
+                if not serial.watched:
+                    self.serials_to_show.append(serial)
+                    print(
+                        f'{len(self.serials_to_show)}. {serial_name}. (Остановились на s{serial.current_season}.e{serial.current_season})')
+        else:
+            print('В вашей фильмотеке нет сериалов :(')
+
+    def dump_serials(self):
+        if self.current_serials:
+            with open(f'{self.data_dir}/watched', 'wb') as f:
+                pickle.dump(self.current_serials, f)
+        else:
+            pass
+
+    def txt_version(self):
+        self.update_serials()
+
+        self.show_serials_list()
 
         command = input('Введите позицию медиа\n')
         old_index = None
@@ -110,13 +142,12 @@ def txt_version(dir_with_serials):
             else:
                 index = old_index
 
-            serials_to_show[index - 1].watch(next_episode)
+            self.serials_to_show[index - 1].watch(next_episode)
+            self.dump_serials()
+
             command = input('Включить следующую серию? (enter/n)\n')
 
-        with open('data/watched', 'wb') as f:
-            pickle.dump(current_serials, f)
-    else:
-        print('В вашей фильмотеке нет сериалов :(')
+
 
 
 def extract_digits(string_with_digits):

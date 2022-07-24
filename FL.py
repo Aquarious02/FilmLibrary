@@ -124,6 +124,17 @@ class LibraryManager:
         else:
             pass
 
+    def process_state(self):
+        match self.current_state:
+            case self.State.deciding:
+                command = input('Введите позицию медиа\n')
+                if command != 'n' and command != 'т':
+                    self.current_state = self.State.watching
+            case self.State.watching:
+                pass
+            case self.State.editing:
+                pass
+
     def txt_version(self):
         self.update_serials()
 

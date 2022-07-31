@@ -1,24 +1,29 @@
 import os
+from pathlib import Path
 import pickle
 from dataclasses import dataclass
 from enum import IntEnum, auto
+
 
 @dataclass
 class Season:
     number: int
     """Starts with 1"""
-    full_path: str
+    full_path: str | Path
     episodes: list
-    """Episodes names"""
+    """Episodes names (relative, no absolute)"""
+
+    def __post_init__(self):
+        if type(self.full_path) is str:
+            self.full_path = Path(self.full_path)
 
 
 @dataclass
 class Serial:
     name: str
-    full_path: str
-    max_season: int
+    full_path: str | Path
     seasons: list[Season]
-    """season_number: full_path, episode_names"""
+    max_season: int
     """Last available season"""
     max_episode: int
     """Last available episode"""
@@ -27,6 +32,10 @@ class Serial:
     current_episode: int = 1
     """Last episode user sopped at"""
     watched: bool = False
+
+    def __post_init__(self):
+        if type(self.full_path) is str:
+            self.full_path = Path(self.full_path)
 
     def increment_episode(self):
         if self.current_episode < self.max_episode:
@@ -46,8 +55,8 @@ class Serial:
     @property
     def current_episode_path(self) -> str:
         current_season = self.seasons[self.current_season - 1]
-        full_path = current_season.full_path
-        full_path += r'\\' + current_season.episodes[self.current_episode - 1]
+        full_path = current_season.full_path / current_season.episodes[self.current_episode - 1]
+        # full_path += r'\\' + current_season.episodes[self.current_episode - 1]
         return full_path
 
     def __repr__(self):
@@ -159,8 +168,6 @@ class LibraryManager:
             command = input('Включить следующую серию? (enter/n)\n')
 
 
-
-
 def extract_digits(string_with_digits):
     digit = []
     for symbol in string_with_digits:
@@ -172,5 +179,7 @@ def extract_digits(string_with_digits):
 
 if __name__ == '__main__':
     directory = r'D:\Entertainment\Movies'
-    # serials = txt_version(directory)
-    txt_version(directory)
+    # txt_version(directory)
+
+    library_manager = LibraryManager(directory)
+    library_manager.txt_version()

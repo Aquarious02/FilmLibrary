@@ -10,7 +10,7 @@ class Season:
     number: int
     """Starts with 1"""
     full_path: str | Path
-    episodes_names: list
+    episodes_names: list[str | Path]
     """Episodes names (relative, no absolute)"""
 
     def __post_init__(self):
@@ -75,7 +75,7 @@ class Serial:
 
 
 class LibraryManager:
-    data_dir = 'data'
+    data_dir = Path('data')
 
     class State(IntEnum):
         deciding = auto()
@@ -95,30 +95,34 @@ class LibraryManager:
         :return: {serial_name: Serial, ...}
         """
         serials = {}
-        for dir_name_with_serial in os.listdir(directory):
-            full_serial_path = fr'{directory}\{dir_name_with_serial}'
-            if os.path.isdir(full_serial_path):
+        for dir_with_serial in Path(directory).iterdir():
+            if dir_with_serial.is_dir():
                 seasons = []
-                for season_number, season_name in enumerate(os.listdir(full_serial_path), start=1):
-                    full_season_path = fr'{full_serial_path}\{season_name}'
-                    seasons.append(Season(season_number, full_season_path, episodes_names=list(os.listdir(full_season_path))))
+                for season_number, season_path in enumerate(dir_with_serial.iterdir(), start=1):
+                    episodes_names = []
+                    for episode in season_path.iterdir():
+                        if episode.is_file():
+                            episodes_names.append(episode)
 
-                serials[dir_name_with_serial] = Serial(dir_name_with_serial, full_serial_path, seasons)
+                    seasons.append(Season(season_number, season_path, episodes_names))
+
+                serials[dir_with_serial.name] = Serial(dir_with_serial.name, dir_with_serial, seasons)
         return serials
 
     def update_serials(self, force_update=False):
         if force_update:
             self.current_serials = self.get_serials_from_dir(self.dir_with_serials)
         else:
+            watched = self.data_dir / 'watched'
             try:
-                with open(f'{self.data_dir}/watched', 'rb') as f:
+                with watched.open('rb') as f:
                     self.current_serials = pickle.load(f)
             except FileNotFoundError:
                 self.current_serials = self.get_serials_from_dir(self.dir_with_serials)
-                if not os.path.exists(self.data_dir):
-                    os.mkdir(self.data_dir)
+                if not self.data_dir.exists():
+                    self.data_dir.mkdir()
 
-                with open(f'{self.data_dir}/watched', 'wb') as f:
+                with watched.open('wb') as f:
                     pickle.dump(self.current_serials, f)
 
     def show_serials_list(self):
@@ -129,7 +133,8 @@ class LibraryManager:
                 if not serial.watched:
                     self.serials_to_show.append(serial)
                     print(
-                        f'{len(self.serials_to_show)}. {serial_name}. (Остановились на s{serial.current_season_number}.e{serial.current_season_number})')
+                        f'{len(self.serials_to_show)}. {serial_name}.'
+                        f' (Остановились на s{serial.current_season_number}.e{serial.current_episode_number})')
         else:
             print('В вашей фильмотеке нет сериалов :(')
 
@@ -164,7 +169,11 @@ class LibraryManager:
                 if '-' in command:
                     next_episode = False
                     command = command.replace('-', '')
-                index = int(command)
+                try:
+                    index = int(command)
+                except Exception as e:
+                    input(f'{e}.\nEnter to close')
+                    break
                 old_index = index
             else:
                 index = old_index

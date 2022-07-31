@@ -71,13 +71,17 @@ class TestLibraryManager(unittest.TestCase):
     @mock.patch('os.path.isdir', side_effect=[True, True, True, False])
     def test_get_serials_from_dir(self, mock_dir, mock_isdir):
         self.my_library_manager.update_serials(force_update=True)
-        # serials = self.my_library_manager.get_serials_from_dir(self.test_dir)
+
         with self.subTest('Serials len'):
             self.assertEqual(len(self.my_library_manager.current_serials), 2)
 
-        with self.subTest('episodes in serials'):
-            self.assertEqual(len(self.my_library_manager['first_serial'].current_season.episodes_names), self.episodes_in_serials['first'])
-            self.assertEqual(len(self.my_library_manager['second_serial'].current_season.episodes_names), self.episodes_in_serials['second'])
+        for serial_number in ('first', 'second'):
+            with self.subTest(f'Seasons in {serial_number}_serial'):
+                self.assertEqual(self.my_library_manager[f'{serial_number}_serial'].max_season_number, 2)
+
+            with self.subTest(f'episodes in {serial_number}_serial'):
+                self.assertEqual(len(self.my_library_manager[f'{serial_number}_serial'].current_season.episodes_names),
+                                 self.episodes_in_serials[serial_number])
 
 
 if __name__ == '__main__':

@@ -10,7 +10,7 @@ class Season:
     number: int
     """Starts with 1"""
     full_path: str | Path
-    episodes: list
+    episodes_names: list
     """Episodes names (relative, no absolute)"""
 
     def __post_init__(self):
@@ -23,27 +23,41 @@ class Serial:
     name: str
     full_path: str | Path
     seasons: list[Season]
-    max_season: int
-    """Last available season"""
-    max_episode: int
-    """Last available episode"""
-    current_season: int = 1
-    """Last season user sopped at"""
-    current_episode: int = 1
-    """Last episode user sopped at"""
+    current_season_number: int = 1
+    """Last season user stopped at"""
+    current_episode_number: int = 1
+    """Last episode user stopped at"""
     watched: bool = False
 
     def __post_init__(self):
         if type(self.full_path) is str:
             self.full_path = Path(self.full_path)
 
+    @property
+    def current_season(self) -> Season:
+        return self.seasons[self.current_season_number - 1]
+
+    @property
+    def current_episode_name(self) -> str:
+        return self.current_season.episodes_names[self.current_episode_number - 1]
+
+    @property
+    def max_episode_number(self):
+        """Last available episode"""
+        return len(self.seasons[self.current_season_number - 1].episodes_names)
+
+    @property
+    def max_season_number(self):
+        """Last available season"""
+        return len(self.seasons)
+
     def increment_episode(self):
-        if self.current_episode < self.max_episode:
-            self.current_episode += 1
+        if self.current_episode_number < self.max_episode_number:
+            self.current_episode_number += 1
         else:
-            if self.current_season < self.max_season:
-                self.current_season += 1
-                self.current_episode = 1
+            if self.current_season_number < self.max_season_number:
+                self.current_season_number += 1
+                self.current_episode_number = 1
             else:
                 self.watched = True
 
@@ -54,13 +68,10 @@ class Serial:
 
     @property
     def current_episode_path(self) -> str:
-        current_season = self.seasons[self.current_season - 1]
-        full_path = current_season.full_path / current_season.episodes[self.current_episode - 1]
-        # full_path += r'\\' + current_season.episodes[self.current_episode - 1]
-        return full_path
+        return self.current_season.full_path / self.current_episode_name
 
     def __repr__(self):
-        return f'{self.name}: s{self.current_season}e{self.current_episode}'
+        return f'{self.name}: s{self.current_season_number}e{self.current_episode_number}'
 
 
 class LibraryManager:
@@ -122,7 +133,7 @@ class LibraryManager:
                 if not serial.watched:
                     self.serials_to_show.append(serial)
                     print(
-                        f'{len(self.serials_to_show)}. {serial_name}. (Остановились на s{serial.current_season}.e{serial.current_season})')
+                        f'{len(self.serials_to_show)}. {serial_name}. (Остановились на s{serial.current_season_number}.e{serial.current_season_number})')
         else:
             print('В вашей фильмотеке нет сериалов :(')
 

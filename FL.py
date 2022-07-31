@@ -95,35 +95,31 @@ class LibraryManager:
         :return: {serial_name: Serial, ...}
         """
         serials = {}
-        for dir_name in os.listdir(directory):
-            full_serial_path = fr'{directory}\{dir_name}'
+        for dir_name_with_serial in os.listdir(directory):
+            full_serial_path = fr'{directory}\{dir_name_with_serial}'
             if os.path.isdir(full_serial_path):
-                last_season = os.listdir(full_serial_path)[-1]
-                last_season_number = extract_digits(last_season)
-
-                max_episode_number = len(os.listdir(fr'{full_serial_path}\{last_season}'))
-
                 seasons = []
                 for season_number, season_name in enumerate(os.listdir(full_serial_path), start=1):
                     full_season_path = fr'{full_serial_path}\{season_name}'
-                    seasons.append(Season(number=season_number, full_path=full_season_path,
-                                          episodes=list(os.listdir(full_season_path))))
+                    seasons.append(Season(season_number, full_season_path, episodes_names=list(os.listdir(full_season_path))))
 
-                serials[dir_name] = Serial(name=dir_name, full_path=full_serial_path, max_season=last_season_number,
-                                           max_episode=max_episode_number, seasons=seasons)
+                serials[dir_name_with_serial] = Serial(dir_name_with_serial, full_serial_path, seasons)
         return serials
 
-    def update_serials(self):
-        try:
-            with open(f'{self.data_dir}/watched', 'rb') as f:
-                self.current_serials = pickle.load(f)
-        except FileNotFoundError:
+    def update_serials(self, force_update=False):
+        if force_update:
             self.current_serials = self.get_serials_from_dir(self.dir_with_serials)
-            if not os.path.exists(self.data_dir):
-                os.mkdir(self.data_dir)
+        else:
+            try:
+                with open(f'{self.data_dir}/watched', 'rb') as f:
+                    self.current_serials = pickle.load(f)
+            except FileNotFoundError:
+                self.current_serials = self.get_serials_from_dir(self.dir_with_serials)
+                if not os.path.exists(self.data_dir):
+                    os.mkdir(self.data_dir)
 
-            with open(f'{self.data_dir}/watched', 'wb') as f:
-                pickle.dump(self.current_serials, f)
+                with open(f'{self.data_dir}/watched', 'wb') as f:
+                    pickle.dump(self.current_serials, f)
 
     def show_serials_list(self):
         if self.current_serials:
@@ -177,6 +173,9 @@ class LibraryManager:
             self.dump_serials()
 
             command = input('Включить следующую серию? (enter/n)\n')
+
+    def __getitem__(self, item) -> Serial:
+        return self.current_serials[item]
 
 
 def extract_digits(string_with_digits):

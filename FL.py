@@ -38,7 +38,7 @@ class Serial:
         return self.seasons[self.current_season_number - 1]  # TODO make with dict (in post_init)?
 
     @property
-    def current_episode_name(self) -> str:
+    def current_episode_name(self) -> str | Path:
         return self.current_season.episodes_names[self.current_episode_number - 1]
 
     @property
@@ -68,7 +68,7 @@ class Serial:
 
     @property
     def current_episode_path(self) -> str:
-        return self.current_season.full_path / self.current_episode_name
+        return self.current_season.full_path / self.current_episode_name  # TODO replace with current_episode_name.full_path (it's PathLike)
 
     def __repr__(self):
         return f'{self.name}: s{self.current_season_number}e{self.current_episode_number}'
@@ -76,6 +76,7 @@ class Serial:
 
 class LibraryManager:
     data_dir = Path('data')
+    watched_path = data_dir / 'watched'
 
     class State(IntEnum):
         deciding = auto()
@@ -113,16 +114,15 @@ class LibraryManager:
         if force_update:
             self.current_serials = self.get_serials_from_dir(self.dir_with_serials)
         else:
-            watched = self.data_dir / 'watched'
             try:
-                with watched.open('rb') as f:
+                with self.watched_path.open('rb') as f:
                     self.current_serials = pickle.load(f)
             except FileNotFoundError:
                 self.current_serials = self.get_serials_from_dir(self.dir_with_serials)
                 if not self.data_dir.exists():
                     self.data_dir.mkdir()
 
-                with watched.open('wb') as f:
+                with self.watched_path.open('wb') as f:
                     pickle.dump(self.current_serials, f)
 
     def show_serials_list(self):
@@ -140,7 +140,7 @@ class LibraryManager:
 
     def dump_serials(self):
         if self.current_serials:
-            with open(f'{self.data_dir}/watched', 'wb') as f:
+            with self.watched_path.open('wb') as f:
                 pickle.dump(self.current_serials, f)
         else:
             pass

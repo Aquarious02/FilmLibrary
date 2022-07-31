@@ -5,7 +5,7 @@ from FL import *
 
 
 def episodes_names(n=10):
-    return list(map(str, range(1, n + 1)))
+    return [Path(str(i)) for i in range(1, n + 1)]
 
 
 class TestSerial(unittest.TestCase):
@@ -59,16 +59,17 @@ class TestLibraryManager(unittest.TestCase):
     def setUp(self) -> None:
         self.my_library_manager = LibraryManager(self.test_dir)
 
-    @mock.patch('os.listdir', side_effect=[['first_serial', 'second_serial'],  # dir_name_with_serial
-                                           ['1 season', '2 season'],  # last_season
-                                           episodes_names(episodes_in_serials['first']),  # max_episode_number
-                                           episodes_names(episodes_in_serials['first']),  # episodes_names in season
+    @mock.patch('pathlib.Path.iterdir',
+                side_effect=[map(Path, ['first_serial', 'second_serial']),  # dir_with_serial
+                             map(Path, ['1 season', '2 season']),  # last_season
+                             episodes_names(episodes_in_serials['first']),  # max_episode_number
+                             episodes_names(episodes_in_serials['first']),  # episodes_names in season
 
-                                           ['1 season second_serial', '2 season second_serial'],  # last_season
-                                           episodes_names(episodes_in_serials['second']),  # max_episode_number
-                                           episodes_names(episodes_in_serials['second'])  # episodes_names in season
-                                           ])
-    @mock.patch('os.path.isdir', side_effect=[True, True, True, False])
+                             map(Path, ['1 season second_serial', '2 season second_serial']),  # last_season
+                             episodes_names(episodes_in_serials['second']),  # max_episode_number
+                             episodes_names(episodes_in_serials['second'])  # episodes_names in season
+                             ])
+    @mock.patch('pathlib.Path.is_dir', side_effect=[True, True, True, False])
     def test_get_serials_from_dir(self, mock_dir, mock_isdir):
         self.my_library_manager.update_serials(force_update=True)
 

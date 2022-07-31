@@ -35,7 +35,7 @@ class Serial:
 
     @property
     def current_season(self) -> Season:
-        return self.seasons[self.current_season_number - 1]
+        return self.seasons[self.current_season_number - 1]  # TODO make with dict (in post_init)?
 
     @property
     def current_episode_name(self) -> str:
@@ -62,9 +62,9 @@ class Serial:
                 self.watched = True
 
     def watch(self, next_episode=True):
+        os.startfile(self.current_episode_path)
         if next_episode:
             self.increment_episode()
-        os.startfile(self.current_episode_path)
 
     @property
     def current_episode_path(self) -> str:

@@ -33,8 +33,17 @@ class TestSerial(unittest.TestCase):
         with self.subTest('Check season not incrementing'):
             self.assertEqual(self.my_serial.current_season_number - 1, init_episode_number)
 
+    def test_max_increment(self):
+        self.my_serial.current_season_number = self.my_serial.max_season_number
+        self.my_serial.current_episode_number = self.my_serial.max_episode_number
+        self.my_serial.increment_episode()
 
+        with self.subTest('If watched'):
+            self.assertTrue(self.my_serial.watched)
 
+        with self.subTest('max season, episode checking'):
+            self.assertEqual(self.my_serial.current_season_number, self.my_serial.max_season_number)
+            self.assertEqual(self.my_serial.current_episode_number, self.my_serial.max_episode_number)
 
 
 if __name__ == '__main__':

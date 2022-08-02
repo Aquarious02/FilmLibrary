@@ -70,7 +70,8 @@ class TestLibraryManager(unittest.TestCase):
                              episodes_names(episodes_in_serials['second'])  # episodes_names in season
                              ])
     @mock.patch('pathlib.Path.is_dir', side_effect=[True, True, True, False])
-    def test_get_serials_from_dir(self, mock_dir, mock_isdir):
+    @mock.patch('pathlib.Path.is_file', return_value=True)
+    def test_get_serials_from_dir(self, mock_dir, mock_isdir, mock_isfile):
         self.my_library_manager.update_serials(force_update=True)
 
         with self.subTest('Serials len'):

@@ -7,11 +7,16 @@ class TXTVersion:
         deciding = auto()
         watching = auto()
         editing = auto()
+        helping = auto()
+        stop = auto()
+
+    stop_word = {'n', 'т', 'stop'}
 
     def __init__(self, dir_with_serials):
         self.lib_manager = LibraryManager(dir_with_serials)
         """library manager"""
         self.current_state = self.State.deciding
+        self.current_index = None
 
     def show_serials_list(self, to_update=False, show_all=False):
         """
@@ -22,8 +27,8 @@ class TXTVersion:
         if to_update:
             self.lib_manager.update_serials(force_update=True)
         serials_list = self.lib_manager.get_serials_list(show_all)
-        print('В вашей фильмотеке содержатся следующие сериалы:')
         if serials_list:
+            print('В вашей фильмотеке содержатся следующие сериалы:')
             for index, serial in enumerate(serials_list, start=1):
                 if not serial.watched:
                     print(f'{index}. {serial.name}. (Остановились на s{serial.current_season_number}.e{serial.current_episode_number})')
@@ -33,38 +38,58 @@ class TXTVersion:
     def process_state(self):
         match self.current_state:
             case self.State.deciding:
-                command = input('Введите позицию медиа\n')
-                if command != 'n' and command != 'т':
-                    self.current_state = self.State.watching
+                self.deciding()
             case self.State.watching:
-                pass
+                self.watching()
             case self.State.editing:
                 pass
+            case self.State.helping:
+                pass
+            case self.State.stop:
+                pass
+
+    def deciding(self):
+        command = input('Введите позицию медиа\n')
+        if command.lower() not in self.stop_word:
+            self.current_state = self.State.watching
+            next_episode = True
+            if '-' in command:
+                next_episode = False
+                command = command.replace('-', '')
+            try:
+                self.current_index = int(command)
+                self.lib_manager.serials_to_show[self.current_index - 1].watch(next_episode)
+                self.lib_manager.dump_serials()
+            except Exception as e:
+                input(f'{e}.\nEnter to close')
+                self.stop()
+        else:
+            self.stop()
+
+    def watching(self):
+        command = input('Включить следующую серию? (enter/n)\n')
+        if command.lower() not in self.stop_word:
+            self.lib_manager.serials_to_show[self.current_index - 1].watch()
+        else:
+            self.current_state = self.State.deciding
+
+    def editing(self):
+        command = input('Введите позицию сериала (enter/n)\n')
+        if command.lower() not in self.stop_word:
+            pass
+        else:
+            self.current_state = self.State.editing
 
     def run(self):
         self.show_serials_list(to_update=True)
 
-        command = input('Введите позицию медиа\n')
-        old_index = None
-        while command != 'n' and command != 'т':
-            next_episode = True
-            if old_index is None:
-                if '-' in command:
-                    next_episode = False
-                    command = command.replace('-', '')
-                try:
-                    index = int(command)
-                except Exception as e:
-                    input(f'{e}.\nEnter to close')
-                    break
-                old_index = index
-            else:
-                index = old_index
+        self.current_state = self.State.deciding
 
-            self.lib_manager.serials_to_show[index - 1].watch(next_episode)
-            self.lib_manager.dump_serials()
+        while self.current_state != self.State.stop:
+            self.process_state()
 
-            command = input('Включить следующую серию? (enter/n)\n')
+    def stop(self):
+        self.current_state = self.State.stop
 
 
 if __name__ == '__main__':

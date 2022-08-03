@@ -1,7 +1,10 @@
+from pathlib import Path
 import unittest
 import unittest.mock as mock
-# import mock
-from FL import *
+import functools
+
+from FL import Serial, Season, LibraryManager
+from Console_ver import TXTVersion, State
 
 
 def episodes_names(n=10):
@@ -52,13 +55,12 @@ class TestSerial(unittest.TestCase):
             self.assertEqual(self.my_serial.current_episode_number, self.my_serial.max_episode_number)
 
 
-class TestLibraryManager(unittest.TestCase):
-    test_dir = r'D:\Entertainment\Movies'
-    episodes_in_serials = {'first': 10, 'second': 8}
+test_dir = r'D:\Entertainment\Movies'
+episodes_in_serials = {'first': 10, 'second': 8}
 
-    def setUp(self) -> None:
-        self.my_library_manager = LibraryManager(self.test_dir)
 
+def apply_path_patches(func):
+    @functools.wraps(func)
     @mock.patch('pathlib.Path.iterdir',
                 side_effect=[map(Path, ['first_serial', 'second_serial']),  # dir_with_serial
                              map(Path, ['1 season', '2 season']),  # last_season
@@ -71,7 +73,19 @@ class TestLibraryManager(unittest.TestCase):
                              ])
     @mock.patch('pathlib.Path.is_dir', side_effect=[True, True, True, False])
     @mock.patch('pathlib.Path.is_file', return_value=True)
-    def test_get_serials_from_dir(self, mock_dir, mock_isdir, mock_isfile):
+    def func_deco(*args, **kwargs):
+        return func(*args, **kwargs)
+
+    return func_deco
+
+
+class TestLibraryManager(unittest.TestCase):
+
+    def setUp(self) -> None:
+        self.my_library_manager = LibraryManager(test_dir)
+
+    @apply_path_patches
+    def test_get_serials_from_dir(self, *args, **kwargs):
         self.my_library_manager.update_serials(force_update=True)
 
         with self.subTest('Serials len'):
@@ -83,7 +97,29 @@ class TestLibraryManager(unittest.TestCase):
 
             with self.subTest(f'episodes in {serial_number}_serial'):
                 self.assertEqual(len(self.my_library_manager[f'{serial_number}_serial'].current_season.episodes_names),
-                                 self.episodes_in_serials[serial_number])
+                                 episodes_in_serials[serial_number])
+
+
+class TestTxtVersion(unittest.TestCase):
+    def setUp(self) -> None:
+        self.txt_version = TXTVersion(test_dir)
+
+    serial_index, season_number, episode_number = 1, 2, 3
+
+    @mock.patch('builtins.input', return_value=f'{serial_index} {season_number} {episode_number}')
+    @apply_path_patches
+    # @mock.patch('builtins.input', return_value=' '.join(map(str, (serial_index, season_number, episode_number))))
+    def test_editing(self, *args, **kwargs):
+        self.txt_version.lib_manager.update_serials(force_update=True)
+        serials_list = self.txt_version.lib_manager.get_serials_list()
+        init_episode_number = serials_list[self.serial_index-1].current_episode_number
+        init_season_number = serials_list[self.serial_index-1].current_season_number
+
+        self.txt_version.editing()
+
+        current_s_e = self.txt_version.lib_manager['first_serial'].current_season_episode
+        self.assertNotEqual(current_s_e, (init_episode_number, init_season_number))
+        self.assertEqual(current_s_e, (self.season_number, self.episode_number))
 
 
 if __name__ == '__main__':

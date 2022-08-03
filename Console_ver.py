@@ -76,9 +76,11 @@ class TXTVersion:
             self.current_state = State.deciding
 
     def editing(self):
-        command = input('Введите позицию сериала (enter/n)\n')
+        command = input('Введите позицию сериала, новые номер сезона и эпизода через пробел\n')
         if command.lower() not in self.stop_word:
-            pass
+            index, new_season, new_episode = list(map(int, command.split()))
+            self.lib_manager.serials_to_show[index - 1].current_season_number = new_season
+            self.lib_manager.serials_to_show[index - 1].current_episode_number = new_episode
         else:
             self.current_state = State.editing
 

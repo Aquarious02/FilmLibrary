@@ -47,6 +47,10 @@ class Serial:
         return len(self.seasons[self.current_season_number - 1].episodes_names)
 
     @property
+    def current_season_episode(self) -> tuple[int, int]:
+        return self.current_season_number, self.current_episode_number
+
+    @property
     def max_season_number(self):
         """Last available season"""
         return len(self.seasons)
@@ -81,7 +85,9 @@ class LibraryManager:
     def __init__(self, dir_with_serials):
         self.dir_with_serials = dir_with_serials
         self.current_serials = None
+        """All serials"""
         self.serials_to_show = None
+        """not watched serials"""
 
     @staticmethod
     def get_serials_from_dir(directory) -> dict:

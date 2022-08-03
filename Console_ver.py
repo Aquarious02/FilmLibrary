@@ -52,7 +52,9 @@ class TXTVersion:
 
     def deciding(self):
         command = input('Введите позицию медиа\n')
-        if command.lower() not in self.stop_word:
+        if command == 'edit':
+            self.current_state = State.editing
+        elif command.lower() not in self.stop_word:
             self.current_state = State.watching
             next_episode = True
             if '-' in command:
@@ -81,6 +83,9 @@ class TXTVersion:
             index, new_season, new_episode = list(map(int, command.split()))
             self.lib_manager.serials_to_show[index - 1].current_season_number = new_season
             self.lib_manager.serials_to_show[index - 1].current_episode_number = new_episode
+            self.current_state = State.deciding
+            self.show_serials_list()
+            self.lib_manager.dump_serials()
         else:
             self.current_state = State.editing
 

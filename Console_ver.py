@@ -1,21 +1,23 @@
-from FL import *
-from enum import IntEnum
+from enum import IntEnum, auto
+
+from FL import LibraryManager
+
+
+class State(IntEnum):
+    deciding = auto()
+    watching = auto()
+    editing = auto()
+    helping = auto()
+    stop = auto()
 
 
 class TXTVersion:
-    class State(IntEnum):
-        deciding = auto()
-        watching = auto()
-        editing = auto()
-        helping = auto()
-        stop = auto()
-
     stop_word = {'n', 'т', 'stop'}
 
     def __init__(self, dir_with_serials):
         self.lib_manager = LibraryManager(dir_with_serials)
         """library manager"""
-        self.current_state = self.State.deciding
+        self.current_state = State.deciding
         self.current_index = None
 
     def show_serials_list(self, to_update=False, show_all=False):
@@ -37,21 +39,21 @@ class TXTVersion:
 
     def process_state(self):
         match self.current_state:
-            case self.State.deciding:
+            case State.deciding:
                 self.deciding()
-            case self.State.watching:
+            case State.watching:
                 self.watching()
-            case self.State.editing:
-                pass
-            case self.State.helping:
-                pass
-            case self.State.stop:
-                pass
+            case State.editing:
+                self.editing()
+            case State.helping:
+                self.helping()
+            case State.stop:
+                self.stop()
 
     def deciding(self):
         command = input('Введите позицию медиа\n')
         if command.lower() not in self.stop_word:
-            self.current_state = self.State.watching
+            self.current_state = State.watching
             next_episode = True
             if '-' in command:
                 next_episode = False
@@ -71,25 +73,29 @@ class TXTVersion:
         if command.lower() not in self.stop_word:
             self.lib_manager.serials_to_show[self.current_index - 1].watch()
         else:
-            self.current_state = self.State.deciding
+            self.current_state = State.deciding
 
     def editing(self):
         command = input('Введите позицию сериала (enter/n)\n')
         if command.lower() not in self.stop_word:
             pass
         else:
-            self.current_state = self.State.editing
+            self.current_state = State.editing
+
+    def helping(self):
+        pass
 
     def run(self):
-        self.show_serials_list(to_update=True)
+        self.lib_manager.update_serials()
 
-        self.current_state = self.State.deciding
+        self.current_state = State.deciding
+        self.show_serials_list()
 
-        while self.current_state != self.State.stop:
+        while self.current_state != State.stop:
             self.process_state()
 
     def stop(self):
-        self.current_state = self.State.stop
+        self.current_state = State.stop
 
 
 if __name__ == '__main__':
